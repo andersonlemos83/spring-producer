@@ -1,2 +1,2 @@
 # spring-producer
-Produto do curso RabbitMQ com SpringBoot e Docker
+Produtor do curso RabbitMQ com SpringBoot e Docker
