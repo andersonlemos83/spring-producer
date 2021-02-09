@@ -1,35 +1,24 @@
 package com.example.spring.producer.configuration;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration
 public class ProducerRabbitConfiguration {
 
     @Value("${spring.rabbitmq.request.routing-key.producer}")
-    private String queue;
+    private String routingKey;
 
     @Value("${spring.rabbitmq.request.exchange.producer}")
     private String exchange;
 
-    @Value("${spring.rabbitmq.request.deadletter.producer}")
+    @Value("${spring.rabbitmq.request.dead-letter.producer}")
     private String deadLetter;
 
-    @Bean
-    public Queue queue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", exchange);
-        args.put("x-dead-letter-routing-key", deadLetter);
-        return new Queue(queue, true, false, false, args);
-    }
+    @Value("${spring.rabbitmq.request.parking-lot.producer}")
+    private String parkingLot;
 
     @Bean
     public DirectExchange exchange() {
@@ -37,17 +26,38 @@ public class ProducerRabbitConfiguration {
     }
 
     @Bean
+    public Queue queue() {
+        return QueueBuilder.durable(routingKey)
+                .deadLetterExchange(exchange)
+                .deadLetterRoutingKey(deadLetter)
+                .build();
+    }
+
+    @Bean
     public Queue deadLetter() {
-        return new Queue(deadLetter);
+        return QueueBuilder.durable(deadLetter)
+                .deadLetterExchange(exchange)
+                .deadLetterRoutingKey(routingKey)
+                .build();
+    }
+
+    @Bean
+    public Queue parkingLot() {
+        return new Queue(parkingLot);
     }
 
     @Bean
     public Binding bindingQueue() {
-        return BindingBuilder.bind(queue()).to(exchange()).with(queue);
+        return BindingBuilder.bind(queue()).to(exchange()).with(routingKey);
     }
 
     @Bean
     public Binding bindingDeadLetter() {
         return BindingBuilder.bind(deadLetter()).to(exchange()).with(deadLetter);
+    }
+
+    @Bean
+    public Binding bindingParkingLot() {
+        return BindingBuilder.bind(parkingLot()).to(exchange()).with(parkingLot);
     }
 }
